@@ -1,9 +1,31 @@
 version: 2.1
-
-orbs:
-    hello: circleci/hello-build@0.0.7
-
-workflows:
-    "Hello Workflow":
-        jobs:
-          - hello/hello-build
+jobs:
+    build:
+        docker:
+            - iamge: circleci:python:3.6.2-stretch-browsers
+              environment:
+                FLASK_CONFIG: testing
+                TEST_DATABASE_URL: sqlite://root@localhost/circle_test?sslmode=disable
+            - image: nouchka/sqlite3
+              environment:
+                SQLITE_USER: root
+                SQLITE_DB: circle_test
+                SQLITE_PASSWORD: ""
+        steps:
+            - checkout
+            - restore_cache:
+                key: deps1-{{ .Branch }}-{{ checksum "requirements.txt" }}
+            - run: 
+                name: Install Python deps in a venv
+                command: |
+                    python3 -m venv venv
+                    . venv/bin/activate
+                    pip install -r requirements.txt
+            - run:
+                command: echo {FLASK_CONFIG}
+                environment:
+                    FLASK_CONFIG: staging
+            - save_cache:
+                key: deps1-{{ .Branch }}-{{ checksum "requirements.txt" }}
+                paths:
+                  - "venv"
